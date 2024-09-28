@@ -1,0 +1,15 @@
+NameSpaces are virtual Cluster backed by the same Physical Cluster. K8s Objects, such as pods and containers live in NameSpace. 
+NameSpaces are ways to separate and organise Objects in K8s. All clusters have default namespace.
+
+NameSpaces can be list using kubectl : 
+kubectl get namespaces
+
+NameSpaces needs to be Supply with kubectl : 
+kubectl get pods --namespace <namespace>
+kubectl get pods --namespace kube-system
+kubectl get pods --all-namespaces
+
+Note that if Name space is not defined, system will take default namespace.
+
+User can create their own namespace with kubectl :
+kubectl create namespace levelup360
