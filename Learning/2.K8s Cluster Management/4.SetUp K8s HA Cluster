@@ -1,0 +1,196 @@
+https://www.cherryservers.com/blog/install-kubernetes-on-ubuntu
+
+
+How to Install Kubernetes on Ubuntu 22.04 | Step-by-Step
+
+
+To install Kubernetes on your Ubuntu machine, make sure it meets the following requirements:
+
+2 CPUs
+At least 2GB of RAM
+At least 2 GB of Disk Space
+A reliable internet connection
+
+
+
+--Install Docker
+
+Kubernetes requires an existing Docker installation. If you already have Docker installed, skip ahead to Step 2.If you do not have Kubernetes, install it by following these steps:
+
+Update the package list with the command:
+#sudo apt-get update
+
+Next, install Docker with the command:
+#sudo apt-get install docker.io
+
+Check the installation (and version) by entering the following:
+#docker ––version
+
+Set Docker to launch at boot by entering the following:
+#sudo systemctl enable docker
+
+Verify Docker is running:
+#sudo systemctl status docker
+
+To start Docker if it’s not running:
+#sudo systemctl start docker
+
+Next, configure containerd on all nodes to ensure its compatibility with Kubernetes. First, create a folder for the configuration file with the sudo mkdir /etc/containerd command.
+#mkdir /etc/containerd
+
+Then, create a default configuration file for containerd and save it as config.toml.
+#sudo sh -c "containerd config default > /etc/containerd/config.toml"
+
+#sudo sed -i 's/ SystemdCgroup = false/ SystemdCgroup = true/' /etc/containerd/config.toml
+
+Next, restart containerd services to apply the changes.
+
+#sudo systemctl restart containerd.service
+
+
+
+--Set up the IPV4 bridge on all nodes
+
+To configure the IPV4 bridge on all nodes, execute the following commands on each node.
+
+#cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+#sudo modprobe overlay
+#sudo modprobe br_netfilter
+
+sysctl params required by setup, params persist across reboots
+
+#cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.ipv4.ip_forward                 = 1
+EOF
+
+Apply sysctl params without reboot
+#sudo sysctl --system
+
+
+
+--Install kubelet, kubeadm, and kubectl
+
+
+
+Before installing them, you must update the package index with the sudo apt-get update command.
+#sudo apt-get update
+
+Next, we have to ensure that we can download and install packages from the internet securely.
+#sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+
+Download the public signing key for the Kubernetes package repositories. The same signing key is used for all repositories so you can disregard the version in the URL:
+
+If the directory `/etc/apt/keyrings` does not exist, it should be created before the curl command, read the note below.
+# sudo mkdir -p -m 755 /etc/apt/keyrings
+
+#curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+Note:
+In releases older than Debian 12 and Ubuntu 22.04, directory /etc/apt/keyrings does not exist by default, and it should be created before the curl command.
+
+This below command will overwrites any existing configuration in /etc/apt/sources.list.d/kubernetes.list
+
+#echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+Update the apt package index, install kubelet, kubeadm and kubectl, and pin their version:
+
+#sudo apt-get update
+
+#sudo apt-get install -y kubelet kubeadm kubectl
+
+#sudo apt-mark hold kubelet kubeadm kubectl  (optional)
+
+Verify the installation with:
+#kubeadm version
+
+Enable the kubelet service before running if it is in disabled state.
+#systemctl enable kubelet.service
+
+#sudo systemctl restart kubelet.service
+
+
+
+--Disable swap
+
+You can do it with the following command. 
+#sudo swapoff -a
+this command temporarily disables swap on your system. 
+
+you can check by
+#swapon --show
+
+For permanent,
+#sudo sed -i '/ swap / s/^/#/' /etc/fstab
+
+
+
+
+
+--- Log into both Worker Nodes to perform previous steps.
+
+
+
+
+
+--Initialize the Kubernetes cluster on the master node
+
+When you initialize a Kubernetes control plane using kubeadm, several components are deployed to manage and orchestrate the cluster. Some examples of these components are kube-apiserver, kube-controller-manager, kube-scheduler, etcd, kube-proxy. ‘We need to download the images of these components by running the following command.
+
+#sudo kubeadm config images pull
+
+Next, initialize your master node. The --pod-network-cidr flag is setting the IP address range for the pod network.
+
+#sudo kubeadm init --pod-network-cidr=10.10.0.0/16
+Once this command finishes, it will display a kubeadm join message at the end. Make a note of the whole entry. This will be used to join the worker nodes to the cluster.
+
+
+#mkdir -p $HOME/.kube
+#sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+#sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+
+
+--Configure kubectl and Calico
+
+Run the following commands on the master node to deploy the Calico operator.
+
+#kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
+
+Next, download the custom resources file for Calico, which contains definitions of the various resources that Calico will use.
+
+#curl https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/custom-resources.yaml -O
+#sed -i 's/cidr: 192\.168\.0\.0\/16/cidr: 10.10.0.0\/16/g' custom-resources.yaml
+
+Finally, tell kubectl to create the resources defined in the custom-resources.yaml file.
+
+#kubectl create -f custom-resources.yaml
+
+
+
+
+--Add worker nodes to the cluster
+
+#sudo kubeadm join &lt;MASTER_NODE_IP>:&lt;API_SERVER_PORT> --token &lt;TOKEN> --discovery-token-ca-cert-hash &lt;CERTIFICATE_HASH>
+
+
+
+--Verify the cluster and test
+
+Verify that everything is running and communicating:
+#kubectl get pods --all-namespaces
+
+for nodes
+#kubectl get no
+
+
+
+
+
+Official Website
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
