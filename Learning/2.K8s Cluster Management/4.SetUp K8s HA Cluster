@@ -186,7 +186,9 @@ Verify that everything is running and communicating:
 #kubectl get pods --all-namespaces
 
 for nodes
-#kubectl get no
+#kubectl get node
+
+#kubeadm reset
 
 
 
