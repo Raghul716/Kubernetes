@@ -21,14 +21,30 @@ Interact with the Kubernetes API server: kubectl communicates directly with the 
 Kubectl get is used to get the objects, present in K8s Cluster
 $ kubectl get <object_type> <object_name> -o <output> —sort-by <JSONpath> —selector <selector>
 
+#kubectl get pod draining-node-test-pod -o json 
+
 
 ➤ Kubectl describe
 
+kubectl describe <object_type> <object_name>
+#kubectl describe pod draining-node-test-pod
+
 ➤ Kubectl create
+
+kubectl create -f pod.yaml
 
 ➤ Kubectl apply
 
+kubectl apply -f pod.yaml
+If user use kubectl apply on already existing object. It will modify the existing object, if possible.
+
 ➤ Kubectl delete
 
+kubectl delete <object_type> <object_name>
+
 ➤ Kubectl exec
+
+kubectl exec draining-node-test-pod -c nginx -- cat /etc/nginx/nginx.conf
+
+kubectl api-resources
 
