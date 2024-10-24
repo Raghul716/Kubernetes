@@ -1,1 +1,7 @@
 
+  469  vim configmap-vol-demo.yml
+  470  ls
+  471  kubectl apply -f configmap-vol-demo.yml
+  472  kubectl get pods
+  473  kubectl exec configmap-vol-demo -it -- sh
+
